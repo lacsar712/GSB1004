@@ -24,7 +24,10 @@ def list_records():
 def new_record(appointment_id):
     appointment = Appointment.query.get_or_404(appointment_id)
 
-    # 防止提前录入
+    if appointment.status != "scheduled":
+        flash("该预约体检数据已录入，无法重复修改", "warning")
+        return redirect(url_for("records.list_records"))
+
     if appointment.scheduled_date > business_today():
         flash("无法为未来的预约录入数据", "warning")
         return redirect(url_for("records.list_records"))

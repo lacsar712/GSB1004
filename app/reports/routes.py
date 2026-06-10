@@ -1,6 +1,6 @@
 import json
 
-from flask import render_template
+from flask import abort, render_template
 from flask_login import login_required, current_user
 
 from . import reports_bp
@@ -29,6 +29,8 @@ def report_detail(appointment_id):
     appointment = Appointment.query.get_or_404(appointment_id)
     if current_user.role == "user" and appointment.user_id != current_user.id:
         return render_template("reports/unauthorized.html"), 403
+    if appointment.status != "completed":
+        abort(403)
 
     metric_definitions = MetricDefinition.query.order_by(
         MetricDefinition.category, MetricDefinition.id
