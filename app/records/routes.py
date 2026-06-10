@@ -24,6 +24,11 @@ def list_records():
 def new_record(appointment_id):
     appointment = Appointment.query.get_or_404(appointment_id)
 
+    # 仅允许对未完成的预约进行录入，防止重复修改已完成数据
+    if appointment.status != "scheduled":
+        flash("该预约无法录入数据", "warning")
+        return redirect(url_for("records.list_records"))
+
     # 防止提前录入
     if appointment.scheduled_date > business_today():
         flash("无法为未来的预约录入数据", "warning")
