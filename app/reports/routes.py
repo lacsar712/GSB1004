@@ -27,6 +27,8 @@ def list_reports():
 @login_required
 def report_detail(appointment_id):
     appointment = Appointment.query.get_or_404(appointment_id)
+    if appointment.status != "completed":
+        return render_template("reports/unauthorized.html"), 403
     if current_user.role == "user" and appointment.user_id != current_user.id:
         return render_template("reports/unauthorized.html"), 403
 
