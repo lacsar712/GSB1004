@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+  <div class="col-12 col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5">
+        <h1 class="h4 mb-3">无权限访问</h1>
+        <p class="text-muted mb-4">当前账号无法查看该体检报告。</p>
+        <a class="btn btn-outline-primary" href="{{ url_for('reports.list_reports') }}">返回报告列表</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

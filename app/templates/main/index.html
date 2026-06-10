@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="p-4 p-md-5 mb-4 rounded-3 app-hero text-white">
+  <div class="container-fluid py-2 px-0">
+    <h1 class="display-6 fw-bold mb-1">欢迎，{{ current_user.username }}</h1>
+    <p class="mb-0">今天也是关注健康的一天。</p>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">预约总数</div>
+        <div class="display-5 fw-bold mt-2">{{ appointment_count }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">已完成体检</div>
+        <div class="display-5 fw-bold mt-2">{{ completed_exam_count }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body">
+    <h2 class="h5 mb-3">快速入口</h2>
+    <div class="row g-3">
+      <div class="col-12 col-sm-6 col-lg-3">
+        <a href="{{ url_for('appointments.list_appointments') }}" class="btn btn-outline-primary w-100 py-3">
+          {% if current_user.role in ['admin', 'staff'] %}预约管理{% else %}我的预约{% endif %}
+        </a>
+      </div>
+
+      <div class="col-12 col-sm-6 col-lg-3">
+        <a href="{{ url_for('appointments.new_appointment') }}" class="btn btn-primary w-100 py-3">新建预约</a>
+      </div>
+
+      {% if current_user.role in ['staff', 'admin'] %}
+      <div class="col-12 col-sm-6 col-lg-3">
+        <a href="{{ url_for('records.list_records') }}" class="btn btn-outline-success w-100 py-3">数据录入</a>
+      </div>
+      {% endif %}
+
+      <div class="col-12 col-sm-6 col-lg-3">
+        <a href="{{ url_for('reports.list_reports') }}" class="btn btn-outline-secondary w-100 py-3">体检报告</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

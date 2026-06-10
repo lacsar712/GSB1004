@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% set total_count = appointments|length %}
+{% set status_labels = {'scheduled': '待体检', 'completed': '已完成'} %}
+{% set status_styles = {'scheduled': 'warning', 'completed': 'success'} %}
+
+<div class="d-flex flex-column gap-4">
+  <div class="d-flex flex-column flex-md-row justify-content-md-between align-items-md-center gap-3">
+    <div>
+      <h1 class="h3 mb-1">{% if current_user.role in ['admin', 'staff'] %}预约管理{% else %}我的预约{% endif %}</h1>
+      <p class="text-muted mb-0">查看和管理预约信息</p>
+    </div>
+    <a href="{{ url_for('appointments.new_appointment') }}" class="btn btn-primary">新建预约</a>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-12 col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">预约总数</div>
+          <div class="display-6 fw-bold mt-2">{{ total_count }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">待体检</div>
+          <div class="display-6 fw-bold mt-2 text-warning">
+            {{ appointments | selectattr('status', 'equalto', 'scheduled') | list | length }}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small">已完成</div>
+          <div class="display-6 fw-bold mt-2 text-success">
+            {{ appointments | selectattr('status', 'equalto', 'completed') | list | length }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+      <span class="fw-semibold">预约列表</span>
+      <span class="text-muted small">按日期倒序</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            {% if current_user.role in ['admin', 'staff'] %}
+            <th>用户</th>
+            {% endif %}
+            <th>套餐</th>
+            <th>日期</th>
+            <th>时间</th>
+            <th>状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for appointment in appointments %}
+          <tr>
+            {% if current_user.role in ['admin', 'staff'] %}
+            <td>{{ appointment.user.username }}</td>
+            {% endif %}
+            <td>{{ appointment.package.name }}</td>
+            <td>{{ appointment.scheduled_date.strftime('%Y年%m月%d日') }}</td>
+            <td>{{ appointment.scheduled_time.strftime('%H:%M') }}</td>
+            <td>
+              {% set label = status_labels.get(appointment.status, appointment.status) %}
+              {% set badge = status_styles.get(appointment.status, 'secondary') %}
+              <span class="badge text-bg-{{ badge }}">{{ label }}</span>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="{% if current_user.role in ['admin', 'staff'] %}5{% else %}4{% endif %}" class="text-center py-5 text-muted">
+              暂无预约记录
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

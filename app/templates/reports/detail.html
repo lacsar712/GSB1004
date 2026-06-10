@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('reports.list_reports') }}">体检报告</a></li>
+    <li class="breadcrumb-item active" aria-current="page">报告详情</li>
+  </ol>
+</nav>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <h1 class="h3 mb-2">体检报告</h1>
+    <div class="row g-2 small text-muted">
+      <div class="col-12 col-md-4">患者: <span class="text-dark fw-semibold">{{ appointment.user.username }}</span></div>
+      <div class="col-12 col-md-4">套餐: <span class="text-dark fw-semibold">{{ appointment.package.name }}</span></div>
+      <div class="col-12 col-md-4">时间: <span class="text-dark fw-semibold">{{ appointment.scheduled_date }} {{ appointment.scheduled_time.strftime('%H:%M') }}</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-6 col-xl-2">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">正常指标</div>
+        <div class="display-6 fw-bold text-success mt-2">{{ normal_records_count }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-6 col-xl-2">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">异常指标</div>
+        <div class="display-6 fw-bold text-danger mt-2">{{ abnormal_records_count }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-6 col-xl-2">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">未录入</div>
+        <div class="display-6 fw-bold text-secondary mt-2">{{ missing_metrics_count }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-6 col-xl-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">异常率</div>
+        <div class="display-6 fw-bold mt-2 {% if abnormal_rate > 0 %}text-danger{% else %}text-success{% endif %}">{{ abnormal_rate }}%</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-6 col-xl-3">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">总指标数</div>
+        <div class="display-6 fw-bold mt-2">{{ total_metrics_count }}</div>
+        <div class="small text-muted">已录入: {{ recorded_metrics_count }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-12 col-lg-7">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+          <h2 class="h5 mb-0">指标图表</h2>
+          <div class="chart-legend">
+            <span class="chart-legend-item"><span class="chart-dot chart-dot-normal"></span>正常</span>
+            <span class="chart-legend-item"><span class="chart-dot chart-dot-abnormal"></span>异常</span>
+            <span class="chart-legend-item"><span class="chart-dot chart-dot-missing"></span>未录入</span>
+            <span class="chart-legend-item"><span class="chart-dot chart-dot-range"></span>参考区间</span>
+          </div>
+        </div>
+
+        <div class="chart-panel">
+          <div id="chartSkeleton" class="chart-skeleton" aria-hidden="true"></div>
+          <canvas id="metricChart" class="d-none"></canvas>
+          <div id="chartLoadError" class="alert alert-warning d-none mb-0" role="alert">图表加载失败，请刷新重试。</div>
+        </div>
+
+        <div id="chartData" data-items='{{ chart_items_json | safe }}' class="d-none"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h5 mb-3">指标明细</h2>
+        <div class="vstack gap-2" style="max-height: 320px; overflow-y: auto;">
+          {% for item in chart_items %}
+          <div class="border rounded p-3 metric-row {% if item.status == 'abnormal' %}metric-row-abnormal{% elif item.status == 'missing' %}metric-row-missing{% endif %}">
+            <div class="d-flex justify-content-between align-items-center gap-2">
+              <strong>{{ item.name }}</strong>
+              {% if item.status == 'abnormal' %}
+              <span class="badge text-bg-danger">异常</span>
+              {% elif item.status == 'normal' %}
+              <span class="badge text-bg-success">正常</span>
+              {% elif item.status == 'missing' %}
+              <span class="badge badge-missing">未录入</span>
+              {% else %}
+              <span class="badge text-bg-secondary">无范围</span>
+              {% endif %}
+            </div>
+            <div class="d-flex justify-content-between mt-2 small">
+              <span class="fw-semibold {% if item.status == 'abnormal' %}text-danger{% elif item.status == 'missing' %}text-secondary{% endif %}">
+                {% if item.status == 'missing' %}
+                未录入
+                {% else %}
+                {{ item.display_value }} {{ item.unit }}
+                {% endif %}
+              </span>
+              <span class="text-muted">参考: {{ item.normal_range }}</span>
+            </div>
+            {% if item.chart_note %}
+            <div class="small text-muted mt-1">{{ item.chart_note }}</div>
+            {% endif %}
+            {% if item.status == 'missing' and item.display_value != '未录入' %}
+            <div class="small text-muted mt-1">原始值: {{ item.display_value }}</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm {% if health_suggestions %}border-warning-subtle{% else %}border-success-subtle{% endif %}">
+  <div class="card-body">
+    <h2 class="h5 mb-3">{% if health_suggestions %}健康建议{% else %}指标结论{% endif %}</h2>
+    {% if health_suggestions %}
+    <ul class="mb-0">
+      {% for suggestion in health_suggestions %}
+      <li><strong>{{ suggestion.name }}:</strong> {{ suggestion.suggestion }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="mb-0 text-success">所有指标均在正常范围，请保持当前生活方式。</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/chartjs/chart.umd.min.js') }}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const chartDataElement = document.getElementById('chartData');
+    const chartCanvas = document.getElementById('metricChart');
+    const chartSkeleton = document.getElementById('chartSkeleton');
+    const chartLoadError = document.getElementById('chartLoadError');
+
+    if (!chartDataElement || !chartCanvas) {
+      return;
+    }
+
+    function hideSkeleton() {
+      if (chartSkeleton) {
+        chartSkeleton.classList.add('d-none');
+      }
+    }
+
+    function showError(message) {
+      hideSkeleton();
+      if (chartLoadError) {
+        chartLoadError.textContent = message;
+        chartLoadError.classList.remove('d-none');
+      }
+    }
+
+    let items = [];
+    try {
+      items = JSON.parse(chartDataElement.dataset.items || '[]');
+    } catch (error) {
+      showError('图表数据解析失败，请刷新重试。');
+      return;
+    }
+
+    if (!window.Chart) {
+      showError('图表加载失败，请刷新重试。');
+      return;
+    }
+
+    const labels = items.map(item => item.name);
+    const observedMax = Math.max(0, ...items.map(item => {
+      const rangeMax = Number(item.max);
+      const value = Number(item.chart_value);
+      return Math.max(Number.isFinite(rangeMax) ? rangeMax : 0, Number.isFinite(value) ? value : 0);
+    }));
+    const placeholderHeight = observedMax > 0 ? Math.max(observedMax * 0.15, 1) : 1;
+    const values = items.map(item => {
+      if (item.is_missing) {
+        return placeholderHeight;
+      }
+      const value = Number(item.chart_value);
+      return Number.isFinite(value) ? value : 0;
+    });
+
+    function statusText(status) {
+      if (status === 'abnormal') return '异常';
+      if (status === 'normal') return '正常';
+      if (status === 'missing') return '未录入';
+      return '无范围';
+    }
+
+    function barBackground(status) {
+      if (status === 'abnormal') return 'rgba(220, 53, 69, 0.45)';
+      if (status === 'missing') return 'rgba(108, 117, 125, 0.35)';
+      if (status === 'no_range') return 'rgba(13, 110, 253, 0.35)';
+      return 'rgba(25, 135, 84, 0.45)';
+    }
+
+    function barBorder(status) {
+      if (status === 'abnormal') return 'rgba(220, 53, 69, 1)';
+      if (status === 'missing') return 'rgba(108, 117, 125, 1)';
+      if (status === 'no_range') return 'rgba(13, 110, 253, 1)';
+      return 'rgba(25, 135, 84, 1)';
+    }
+
+    const rangeOverlayPlugin = {
+      id: 'rangeOverlayPlugin',
+      afterDatasetsDraw(chart) {
+        const { ctx, scales: { y } } = chart;
+        const meta = chart.getDatasetMeta(0);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(108, 117, 125, 0.9)';
+        ctx.lineWidth = 1.5;
+
+        items.forEach((item, index) => {
+          if (item.min === null || item.max === null) {
+            return;
+          }
+
+          const bar = meta.data[index];
+          if (!bar) {
+            return;
+          }
+
+          const x = bar.x;
+          const yMin = y.getPixelForValue(item.min);
+          const yMax = y.getPixelForValue(item.max);
+
+          ctx.beginPath();
+          ctx.moveTo(x, yMin);
+          ctx.lineTo(x, yMax);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(x - 6, yMin);
+          ctx.lineTo(x + 6, yMin);
+          ctx.moveTo(x - 6, yMax);
+          ctx.lineTo(x + 6, yMax);
+          ctx.stroke();
+        });
+
+        ctx.restore();
+      }
+    };
+
+    try {
+      new Chart(chartCanvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: '指标值',
+              data: values,
+              backgroundColor: items.map(item => barBackground(item.status)),
+              borderColor: items.map(item => barBorder(item.status)),
+              borderWidth: 2,
+              borderRadius: 6,
+              maxBarThickness: 42,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false,
+            },
+            tooltip: {
+              callbacks: {
+                label(context) {
+                  const item = items[context.dataIndex];
+                  const valueText = item.is_missing
+                    ? '未录入'
+                    : `${item.display_value} ${item.unit}`;
+                  return `状态: ${statusText(item.status)} | 值: ${valueText} | 参考: ${item.normal_range}`;
+                },
+                afterLabel(context) {
+                  const item = items[context.dataIndex];
+                  if (item.chart_note) {
+                    return item.chart_note;
+                  }
+                  if (item.is_missing) {
+                    return '图表柱为未录入占位，不代表真实测量值';
+                  }
+                  return '';
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              suggestedMax: observedMax > 0 ? observedMax * 1.2 : 10,
+              ticks: {
+                precision: 0,
+              }
+            }
+          }
+        },
+        plugins: [rangeOverlayPlugin],
+      });
+
+      hideSkeleton();
+      chartCanvas.classList.remove('d-none');
+    } catch (error) {
+      showError('图表加载失败，请刷新重试。');
+    }
+  });
+</script>
+{% endblock %}

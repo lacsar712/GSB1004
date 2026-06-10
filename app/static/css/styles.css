@@ -1,0 +1,124 @@
+:root {
+  --app-primary: #0d6efd;
+  --app-secondary: #0b5ed7;
+  --app-navbar: linear-gradient(135deg, #0d6efd 0%, #2b59c3 100%);
+}
+
+body.app-body {
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.app-navbar {
+  background: var(--app-navbar);
+}
+
+.app-navbar .navbar-toggler {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.app-navbar .navbar-toggler-icon {
+  filter: invert(1);
+}
+
+.app-hero {
+  background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+}
+
+.card {
+  border-radius: 0.875rem;
+}
+
+.package-option {
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.package-option:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.4rem 1rem rgba(13, 110, 253, 0.15);
+}
+
+.toast-container {
+  z-index: 1080;
+}
+
+.chart-panel {
+  position: relative;
+  min-height: 320px;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.chart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.chart-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.chart-dot-normal {
+  background: rgba(25, 135, 84, 1);
+}
+
+.chart-dot-abnormal {
+  background: rgba(220, 53, 69, 1);
+}
+
+.chart-dot-missing {
+  background: rgba(108, 117, 125, 1);
+}
+
+.chart-dot-range {
+  background: rgba(108, 117, 125, 0.9);
+}
+
+.chart-skeleton {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.5rem;
+  background: linear-gradient(
+    90deg,
+    rgba(222, 226, 230, 0.55) 25%,
+    rgba(248, 249, 250, 0.95) 50%,
+    rgba(222, 226, 230, 0.55) 75%
+  );
+  background-size: 200% 100%;
+  animation: chartShimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes chartShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.metric-row-abnormal {
+  border-color: rgba(220, 53, 69, 0.28) !important;
+  background-color: rgba(220, 53, 69, 0.07);
+}
+
+.metric-row-missing {
+  border-color: rgba(108, 117, 125, 0.3) !important;
+  background-color: rgba(108, 117, 125, 0.08);
+}
+
+.badge-missing {
+  color: #fff;
+  background-color: #6c757d;
+}

@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">首页</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('records.list_records') }}">数据录入</a></li>
+    <li class="breadcrumb-item active" aria-current="page">录入体检数据</li>
+  </ol>
+</nav>
+
+<div class="mb-4">
+  <h1 class="h3 mb-1">录入体检数据</h1>
+  <p class="text-muted mb-0">请逐项填写患者指标</p>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <div class="row g-2">
+      <div class="col-12 col-md-4"><strong>患者:</strong> {{ appointment.user.username }}</div>
+      <div class="col-12 col-md-4"><strong>套餐:</strong> {{ appointment.package.name }}</div>
+      <div class="col-12 col-md-4"><strong>预约时间:</strong> {{ appointment.scheduled_date }} {{ appointment.scheduled_time.strftime('%H:%M') }}</div>
+    </div>
+  </div>
+</div>
+
+<form method="post" id="recordForm" class="vstack gap-4">
+  {% for category, metrics_in_category in grouped_metrics.items() %}
+  <div class="card border-0 shadow-sm metric-category-card">
+    <div class="card-body">
+      <h2 class="h5 mb-3">{{ category }}</h2>
+      <div class="row g-3">
+        {% for metric in metrics_in_category %}
+        <div class="col-12 col-md-6 metric-group">
+          <label class="form-label" for="metric_{{ metric.id }}">{{ metric.name }} ({{ metric.unit }})</label>
+          <input type="{% if metric.name == '血压' %}text{% else %}number{% endif %}" {% if metric.name != '血压' %}step="0.01"{% endif %} name="metric_{{ metric.id }}" id="metric_{{ metric.id }}"
+            class="form-control metric-input" placeholder="{% if metric.name == '血压' %}例如 120 或 120/80{% else %}请输入{{ metric.name }}{% endif %}"
+            data-min="{{ metric.normal_range.split('-')[0] }}"
+            data-max="{{ metric.normal_range.split('-')[1] if '-' in metric.normal_range else '999' }}"
+            data-metric-name="{{ metric.name }}" required>
+          <div class="form-text">参考范围: {{ metric.normal_range }}</div>
+          <div class="small text-warning fw-semibold warning-text d-none">超出正常范围</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h3 class="h6 mb-0">录入进度</h3>
+        <span class="fw-semibold" id="progressPercent">0%</span>
+      </div>
+      <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+        <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+      </div>
+      <div class="small text-muted mt-2">已填写 <span id="filledCount">0</span>/{{ total_metrics }} 项指标</div>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-between">
+    <a href="{{ url_for('records.list_records') }}" class="btn btn-outline-secondary">返回列表</a>
+    <button type="submit" class="btn btn-success" id="submitBtn">保存数据</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('recordForm');
+    const metricInputs = document.querySelectorAll('.metric-input');
+    const submitBtn = document.getElementById('submitBtn');
+    const totalMetrics = metricInputs.length;
+    const bloodPressurePattern = /^\d+(?:\.\d+)?(?:\/\d+(?:\.\d+)?)?$/;
+
+    function validateMetric(input) {
+      const rawValue = input.value.trim();
+      const min = parseFloat(input.dataset.min);
+      const max = parseFloat(input.dataset.max);
+      const metricName = input.dataset.metricName || '';
+      const group = input.closest('.metric-group');
+      const warningText = group.querySelector('.warning-text');
+
+      input.classList.remove('is-valid', 'is-invalid');
+      warningText.classList.add('d-none');
+      warningText.textContent = '超出正常范围';
+
+      if (!rawValue) {
+        return;
+      }
+
+      let value = parseFloat(rawValue);
+      if (metricName === '血压') {
+        const normalized = rawValue.replace('／', '/');
+        if (!bloodPressurePattern.test(normalized)) {
+          input.classList.add('is-invalid');
+          warningText.textContent = '请输入如 120 或 120/80';
+          warningText.classList.remove('d-none');
+          return;
+        }
+        value = parseFloat(normalized.split('/')[0]);
+      }
+
+      if (value < min || value > max) {
+        input.classList.add('is-invalid');
+        warningText.classList.remove('d-none');
+      } else {
+        input.classList.add('is-valid');
+      }
+    }
+
+    function updateProgress() {
+      let filled = 0;
+      metricInputs.forEach(input => {
+        if (input.value.trim() !== '') {
+          filled += 1;
+        }
+      });
+
+      const percent = totalMetrics ? Math.round((filled / totalMetrics) * 100) : 0;
+      document.getElementById('filledCount').textContent = filled;
+      document.getElementById('progressPercent').textContent = percent + '%';
+      document.getElementById('progressBar').style.width = percent + '%';
+      submitBtn.disabled = filled < totalMetrics;
+    }
+
+    metricInputs.forEach(input => {
+      input.addEventListener('input', function () {
+        validateMetric(this);
+        updateProgress();
+      });
+      input.addEventListener('blur', function () {
+        validateMetric(this);
+      });
+    });
+
+    form.addEventListener('submit', function (e) {
+      if (!form.checkValidity()) {
+        e.preventDefault();
+        showToast('请填写所有指标数据', 'error');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = '正在保存...';
+    });
+
+    updateProgress();
+  });
+</script>
+{% endblock %}

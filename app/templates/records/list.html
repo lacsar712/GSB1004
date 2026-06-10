@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+  <h1 class="h3 mb-1">体检数据录入</h1>
+  <p class="text-muted mb-0">查看待录入预约并完成指标填写</p>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">预约总数</div>
+        <div class="display-6 fw-bold mt-2">{{ appointments|length }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">待录入</div>
+        <div class="display-6 fw-bold mt-2 text-warning">
+          {{ appointments|selectattr('status', 'equalto', 'scheduled')|list|length }}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">已完成</div>
+        <div class="display-6 fw-bold mt-2 text-success">
+          {{ appointments|selectattr('status', 'equalto', 'completed')|list|length }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body d-flex flex-column flex-md-row gap-3 justify-content-between">
+    <div class="btn-group" role="group" aria-label="Filter buttons">
+      <button type="button" class="btn btn-primary filter-btn active" data-filter="all">全部</button>
+      <button type="button" class="btn btn-outline-primary filter-btn" data-filter="scheduled">待录入</button>
+      <button type="button" class="btn btn-outline-primary filter-btn" data-filter="completed">已完成</button>
+    </div>
+
+    <div class="input-group" style="max-width: 320px;">
+      <span class="input-group-text">搜索</span>
+      <input type="text" id="searchInput" class="form-control" placeholder="用户名或套餐">
+    </div>
+  </div>
+</div>
+
+<div class="vstack gap-3" id="appointmentList">
+  {% for appointment in appointments %}
+  <div class="card border-0 shadow-sm appointment-card" data-status="{{ appointment.status }}"
+    data-search="{{ appointment.user.username }} {{ appointment.package.name }}">
+    <div class="card-body d-flex flex-column flex-lg-row justify-content-between gap-3">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <h3 class="h5 mb-0">{{ appointment.user.username }}</h3>
+          {% if appointment.status == 'scheduled' %}
+          <span class="badge text-bg-warning">待录入</span>
+          {% else %}
+          <span class="badge text-bg-success">已完成</span>
+          {% endif %}
+        </div>
+        <div class="text-muted small">套餐: {{ appointment.package.name }}</div>
+        <div class="text-muted small">日期: {{ appointment.scheduled_date }}</div>
+        <div class="text-muted small">时间: {{ appointment.scheduled_time.strftime('%H:%M') }}</div>
+      </div>
+
+      <div class="d-flex align-items-center">
+        {% if appointment.status == 'scheduled' %}
+        {% if appointment.scheduled_date > today %}
+        <span class="btn btn-secondary disabled">等待录入</span>
+        {% else %}
+        <a href="{{ url_for('records.new_record', appointment_id=appointment.id) }}" class="btn btn-success">录入数据</a>
+        {% endif %}
+        {% else %}
+        <span class="btn btn-outline-secondary disabled">已录入</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="card border-0 shadow-sm">
+    <div class="card-body text-center py-5 text-muted">
+      暂无预约记录
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const searchInput = document.getElementById('searchInput');
+    const appointmentCards = document.querySelectorAll('.appointment-card');
+
+    function applyButtonState(activeBtn) {
+      filterBtns.forEach(btn => {
+        btn.classList.remove('btn-primary', 'active');
+        btn.classList.add('btn-outline-primary');
+      });
+      activeBtn.classList.add('btn-primary', 'active');
+      activeBtn.classList.remove('btn-outline-primary');
+    }
+
+    function filterCards(status, searchTerm) {
+      appointmentCards.forEach(card => {
+        const cardStatus = card.dataset.status;
+        const searchText = card.dataset.search.toLowerCase();
+        const matchesFilter = status === 'all' || cardStatus === status;
+        const matchesSearch = searchText.includes(searchTerm.toLowerCase());
+        card.style.display = (matchesFilter && matchesSearch) ? 'block' : 'none';
+      });
+    }
+
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', function () {
+        applyButtonState(this);
+        filterCards(this.dataset.filter, searchInput.value);
+      });
+    });
+
+    searchInput.addEventListener('input', function () {
+      const activeFilter = document.querySelector('.filter-btn.active').dataset.filter;
+      filterCards(activeFilter, this.value);
+    });
+
+    applyButtonState(filterBtns[0]);
+  });
+</script>
+{% endblock %}
